@@ -4,7 +4,8 @@ var userSchema = require("../models/user.model");
 var pizzaSchema = require("../models/pizzas.model");
 var bcrypt = require("bcrypt");
 var jwt = require("jsonwebtoken");
-const { token } = require("morgan");
+// const { token } = require("morgan");
+var auth = require("../middleware/auth");
 
 const sendResponse = (res, status, message, data) => {
   res.status(status).json({ status, message, data });
@@ -44,6 +45,19 @@ router.post("/register", async function (req, res, next) {
       password: encryptPass,
       status: status || "",
     });
+
+    const token = jwt.sign(
+      {
+        user_id: users._id,
+        username: users.username,
+        status: users.status,
+      },
+      process.env.TOKEN_KEY,
+      {
+        expiresIn: "2h",
+      }
+    );
+    users.token = token;
 
     return sendResponse(res, 200, "Register success", users);
   } catch (error) {
@@ -85,35 +99,30 @@ router.post("/login", async function (req, res, next) {
         // User not approved
         return sendResponse(res, 401, "Not approve, User is not approved", []);
       }
-    }else{
+    } else {
       // Username not found or password mismatch
-      return sendResponse(res, 400, "Unsuccess, Invalid username or password", []);
+      return sendResponse(
+        res,
+        400,
+        "Unsuccess, Invalid username or password",
+        []
+      );
     }
   } catch (error) {
     return sendResponse(res, 500, "Internal Server Error", []);
   }
 });
 
-// Middleware to verify JWT
-function authenticateToken(req, res, next) {
-  const token = req.headers["authorization"];
-
-  if (token == null) return res.sendStatus(401); // if there is no token
-
-  jwt.verify(token, process.env.TOKEN_KEY, (err, user) => {
-    if (err) return res.sendStatus(403); // if token is not valid
-    req.user = user;
-    next();
-  });
-}
-
 /* GET pizza menu. */
-router.get("/menu", authenticateToken, async function (req, res, next) {
+router.get("/menu", auth, async function (req, res, next) {
   try {
-    const pizzaMenu = await pizzaSchema.find();
-    res.json(pizzaMenu);
+
+    // get all product
+    const menuPizzas = await pizzaSchema.find();
+
+    return sendResponse(res, 200, "success", menuPizzas);
   } catch (error) {
-    next(error);
+    return sendResponse(res, 500, "Internal Server Error", []);
   }
 });
 
