@@ -2,9 +2,9 @@ var express = require("express");
 var router = express.Router();
 var userSchema = require("../models/user.model");
 var pizzaSchema = require("../models/pizzas.model");
+var ordersSchema = require("../models/orders.model");
 var bcrypt = require("bcrypt");
 var jwt = require("jsonwebtoken");
-// const { token } = require("morgan");
 var auth = require("../middleware/auth");
 
 const sendResponse = (res, status, message, data) => {
@@ -143,6 +143,19 @@ router.get("/menu", auth, async function (req, res, next) {
 
     return sendResponse(res, 200, "success", menuPizzas);
   } catch (error) {
+    return sendResponse(res, 500, "Internal Server Error", []);
+  }
+});
+
+/* GET pizza orders. */
+router.get("/orders", auth, async function (req, res, next) {
+  try {
+    // get all product
+    const orderPizzas = await ordersSchema.find();
+
+    return sendResponse(res, 200, "success", orderPizzas);
+  } catch (error) {
+    console.error('error ', error)
     return sendResponse(res, 500, "Internal Server Error", []);
   }
 });
