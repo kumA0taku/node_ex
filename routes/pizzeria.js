@@ -29,7 +29,7 @@ router.post("/register", async function (req, res, next) {
       password: encryptPass,
       status: status || null,
     });
-
+//remove token from register
     const token = jwt.sign(
       {
         user_id: users._id,
@@ -43,7 +43,7 @@ router.post("/register", async function (req, res, next) {
 
     users.token = token;
     res.status(201).json(users);
-    res.status(201).send("User registered successfully");
+    // res.status(201).send("User registered successfully");
   } catch (error) {
     console.error(error);
     res.status(500).send("An error occurred");
