@@ -14,7 +14,7 @@ const sendResponse = (res, status, message, data) => {
 /*register*/
 router.post("/register", async function (req, res, next) {
   try {
-    const { username, password, status } = req.body;
+    const { username, password } = req.body;
 
     // Check for missing required fields
     if (!username || !password) {
@@ -43,14 +43,13 @@ router.post("/register", async function (req, res, next) {
     const users = await userSchema.create({
       username,
       password: encryptPass,
-      status: status || "",
     });
 
     const token = jwt.sign(
       {
         user_id: users._id,
         username: users.username,
-        status: users.status,
+        approve: users.approve,
       },
       process.env.TOKEN_KEY,
       {
@@ -68,7 +67,7 @@ router.post("/register", async function (req, res, next) {
 /*login*/
 router.post("/login", async function (req, res, next) {
   try {
-    const { username, password, status } = req.body;
+    const { username, password, approve } = req.body;
 
     if (!(username && password)) {
       return sendResponse(res, 400, "Unsuccess, All input is require", []);
@@ -79,12 +78,12 @@ router.post("/login", async function (req, res, next) {
 
     // Check if user exists and password matches
     if (users && (await bcrypt.compare(password, users.password))) {
-      if (users.status == "approve") {
+      if (users.approve == true) {
         const token = jwt.sign(
           {
             user_id: users._id,
             username: users.username,
-            status: users.status,
+            approve: users.approve,
           },
           process.env.TOKEN_KEY,
           {
@@ -113,10 +112,32 @@ router.post("/login", async function (req, res, next) {
   }
 });
 
+/* PUT approve status */
+router.put("/approve/:id", auth, async function (req, res, next) {
+  try {
+    const { id } = req.params;
+    const { approve } = req.body;
+
+    // Find and update the user's status
+    const users = await userSchema.findById(id);
+    if (!users) {
+      return sendResponse(res, 400, "Unsuccess, User not found", []);
+    }
+    users.approve = approve;
+    console.log(users)
+    await users.save();
+
+    // return sendResponse(res, 200, "Login success", users);
+    return sendResponse(res, 200, "User has been Approved!", users);
+  } catch (error) {
+    console.error('error ', error)
+    return sendResponse(res, 500, "Internal Server Error", []);
+  }
+});
+
 /* GET pizza menu. */
 router.get("/menu", auth, async function (req, res, next) {
   try {
-
     // get all product
     const menuPizzas = await pizzaSchema.find();
 

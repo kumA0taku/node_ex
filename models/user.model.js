@@ -5,7 +5,7 @@ const userSchema = new Schema(
   {
     username: { type: String, unique: true, require: true },
     password: { type: String, require: true },
-    status: { type: String, default: "" },
+    approve: { type: Boolean, default: false },
     token: { type: String },
   },
   {
