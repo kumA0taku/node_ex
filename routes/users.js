@@ -2,7 +2,7 @@ var express = require("express");
 var router = express.Router();
 var multer = require("multer")
 var userSchema = require("../models/user.model");
-var productsSchem = require("../models/product.model");
+// var productsSchem = require("../models/product.model");
 var bcrypt = require('bcrypt')
 var jwt = require('jsonwebtoken')
 

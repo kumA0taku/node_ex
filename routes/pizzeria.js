@@ -1,9 +1,14 @@
 var express = require("express");
 var router = express.Router();
 var userSchema = require("../models/user.model");
+var pizzaSchema = require("../models/pizzas.model");
 var bcrypt = require("bcrypt");
 var jwt = require("jsonwebtoken");
 const { token } = require("morgan");
+
+const sendResponse = (res, status, message, data) => {
+  res.status(status).json({ status, message, data });
+};
 
 /*register*/
 router.post("/register", async function (req, res, next) {
@@ -12,12 +17,22 @@ router.post("/register", async function (req, res, next) {
 
     // Check for missing required fields
     if (!username || !password) {
-      return res.status(400).send("Username and password are required");
+      return sendResponse(
+        res,
+        400,
+        "unsuccess, check your username or password",
+        []
+      );
     }
 
     const existingUser = await userSchema.findOne({ username });
     if (existingUser) {
-      res.status(401).send("Username already exists");
+      return sendResponse(
+        res,
+        400,
+        "unsuccess, Please use another username",
+        []
+      );
     }
 
     //encrypt password
@@ -27,25 +42,12 @@ router.post("/register", async function (req, res, next) {
     const users = await userSchema.create({
       username,
       password: encryptPass,
-      status: status || null,
+      status: status || "",
     });
-//remove token from register
-    const token = jwt.sign(
-      {
-        user_id: users._id,
-        username,
-      },
-      process.env.TOKEN_KEY,
-      {
-        expiresIn: "2h",
-      }
-    );
 
-    users.token = token;
-    res.status(200).json(users);
+    return sendResponse(res, 200, "Register success", users);
   } catch (error) {
-    console.error(error);
-    res.status(500).send("An error occurred");
+    return sendResponse(res, 500, "Internal Server Error", []);
   }
 });
 
@@ -55,42 +57,64 @@ router.post("/login", async function (req, res, next) {
     const { username, password, status } = req.body;
 
     if (!(username && password)) {
-      res.status(400).send("All input is require");
+      return sendResponse(res, 400, "Unsuccess, All input is require", []);
     }
 
+    // Find user by username
     const users = await userSchema.findOne({ username });
 
+    // Check if user exists and password matches
     if (users && (await bcrypt.compare(password, users.password))) {
       if (users.status == "approve") {
         const token = jwt.sign(
-          { user_id: users._id, username, status },
+          {
+            user_id: users._id,
+            username: users.username,
+            status: users.status,
+          },
           process.env.TOKEN_KEY,
           {
             expiresIn: "2h",
           }
         );
-        users.token = token; //compare token of user
-        console.log(token)
-        console.log(users)
-        res.status(200).json(users);
+        users.token = token;
+
+        // Send success response with user data
+        return sendResponse(res, 200, "Login success", users);
       } else {
-        return res.status(403).send("User is not approved");
+        // User not approved
+        return sendResponse(res, 401, "Not approve, User is not approved", []);
       }
+    }else{
+      // Username not found or password mismatch
+      return sendResponse(res, 400, "Unsuccess, Invalid username or password", []);
     }
   } catch (error) {
-    console.error(error);
-    if (error.code === 11000) {
-      return res.status(400).send("Duplicate key error");
-    }
-    res.status(500).send("An error occurred");
+    return sendResponse(res, 500, "Internal Server Error", []);
   }
 });
 
+// Middleware to verify JWT
+function authenticateToken(req, res, next) {
+  const token = req.headers["authorization"];
+
+  if (token == null) return res.sendStatus(401); // if there is no token
+
+  jwt.verify(token, process.env.TOKEN_KEY, (err, user) => {
+    if (err) return res.sendStatus(403); // if token is not valid
+    req.user = user;
+    next();
+  });
+}
+
 /* GET pizza menu. */
-router.get("/menu", async function (req, res, next) {
-  //authen token
-  //query data
- 
+router.get("/menu", authenticateToken, async function (req, res, next) {
+  try {
+    const pizzaMenu = await pizzaSchema.find();
+    res.json(pizzaMenu);
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;
