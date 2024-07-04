@@ -42,8 +42,7 @@ router.post("/register", async function (req, res, next) {
     );
 
     users.token = token;
-    res.status(201).json(users);
-    // res.status(201).send("User registered successfully");
+    res.status(200).json(users);
   } catch (error) {
     console.error(error);
     res.status(500).send("An error occurred");
@@ -53,7 +52,7 @@ router.post("/register", async function (req, res, next) {
 /*login*/
 router.post("/login", async function (req, res, next) {
   try {
-    const { username, password } = req.body;
+    const { username, password, status } = req.body;
 
     if (!(username && password)) {
       res.status(400).send("All input is require");
@@ -64,15 +63,16 @@ router.post("/login", async function (req, res, next) {
     if (users && (await bcrypt.compare(password, users.password))) {
       if (users.status == "approve") {
         const token = jwt.sign(
-          { user_id: users._id, username },
+          { user_id: users._id, username, status },
           process.env.TOKEN_KEY,
           {
             expiresIn: "2h",
           }
         );
-        users.token = token;
+        users.token = token; //compare token of user
+        console.log(token)
+        console.log(users)
         res.status(200).json(users);
-        res.status(201).send("User login successfully");
       } else {
         return res.status(403).send("User is not approved");
       }
