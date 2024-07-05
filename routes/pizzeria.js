@@ -113,7 +113,7 @@ router.post("/login", async function (req, res, next) {
 });
 
 /* PUT approve status */
-router.put("/approve/:id", auth, async function (req, res, next) {
+router.put("/approve/id/:id", auth, async function (req, res, next) {
   try {
     const { id } = req.params;
     const { approve } = req.body;
@@ -143,6 +143,24 @@ router.get("/menu", auth, async function (req, res, next) {
 
     return sendResponse(res, 200, "success", menuPizzas);
   } catch (error) {
+    return sendResponse(res, 500, "Internal Server Error", []);
+  }
+});
+
+/* GET pizza menu by id. */
+router.get("/menu/id/:id", auth, async function (req, res, next) {
+  try {
+    const { id } = req.params;
+
+    // Find and update the user's status
+    const menuPizzas = await pizzaSchema.findById(id);
+    if (!menuPizzas) {
+      return sendResponse(res, 400, "Unsuccess, menu not found", []);
+    }
+
+    return sendResponse(res, 200, "success", menuPizzas);
+  } catch (error) {
+    console.error('error ', error)
     return sendResponse(res, 500, "Internal Server Error", []);
   }
 });
