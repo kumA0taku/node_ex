@@ -67,7 +67,7 @@ router.post("/register", async function (req, res, next) {
 /*login*/
 router.post("/login", async function (req, res, next) {
   try {
-    const { username, password, approve } = req.body;
+    const { username, password } = req.body;
 
     if (!(username && password)) {
       return sendResponse(res, 400, "Unsuccess, All input is require", []);
@@ -147,6 +147,35 @@ router.post("/menu/", auth, async function (req, res, next) {
   }
 });
 
+/*add pizza orders*/
+router.post("/orders/:id/orders", auth, async function (req, res, next) {
+  try {
+    const { id } = req.params;
+    const { qty } = req.body;
+
+    if (!id) {
+      return sendResponse(res, 400, "Unsuccess, please enter pizza id", []);
+    }
+
+    const pizzaName = await pizzaSchema.findById(id);
+
+    if (pizzaName.stoke === 0) {
+      return sendResponse(res, 400, "Unsuccess, pizza out of stock", []);
+    } else {
+      const addOrders = await ordersSchema.create({
+        pizza_id: id,
+        pizza_name: pizzaName.menu,
+        qty: qty,
+      });
+      await pizzaSchema.findByIdAndUpdate(id, { stoke: pizzaName.stoke - qty });
+      return sendResponse(res, 200, "success", addOrders);
+    }
+  } catch (error) {
+    console.error("error ", error);
+    return sendResponse(res, 500, "Internal Server Error", []);
+  }
+});
+
 /* PUT approve status */
 router.put("/approve/id/:id", auth, async function (req, res, next) {
   try {
@@ -211,6 +240,24 @@ router.delete("/menu/id/:id", async function (req, res, next) {
   }
 });
 
+/*delete pizza orders*/
+router.delete("/orders/id/:id", auth, async function (req, res, next) {
+  try {
+    const { id } = req.params;
+
+    // Find and delete pizza menu
+    const pizzaOrders = await ordersSchema.findById(id);
+    if (!pizzaOrders) {
+      return sendResponse(res, 400, "Unsuccess, please enter orders id", []);
+    }
+    let delOrders = await ordersSchema.findByIdAndDelete(id, { id });
+    return sendResponse(res, 200, "success", delOrders);
+  } catch (error) {
+    console.error("error ", error);
+    return sendResponse(res, 500, "Internal Server Error", []);
+  }
+});
+
 /* GET pizza menu. */
 router.get("/menu", auth, async function (req, res, next) {
   try {
@@ -248,6 +295,36 @@ router.get("/orders", auth, async function (req, res, next) {
     const orderPizzas = await ordersSchema.find();
 
     return sendResponse(res, 200, "success", orderPizzas);
+  } catch (error) {
+    console.error("error ", error);
+    return sendResponse(res, 500, "Internal Server Error", []);
+  }
+});
+
+/* GET pizza orders map product. */
+router.get("/orders/:id/orders", auth, async function (req, res, next) {
+  try {
+    const { id } = req.params;
+    const { pizza_name } = req.query;
+
+    const orderPizzas = await ordersSchema.find({ pizza_id: id });
+    console.log(orderPizzas);
+
+    if (!orderPizzas || orderPizzas.length === 0) {
+      return sendResponse(res, 404, "Order not found", []);
+    }
+    // If you need to filter by pizza_name, add the filtering logic
+    const filteredOrders = pizza_name
+      ? orderPizzas.filter((order) => order.pizza_name == pizza_name)
+      : orderPizzas;
+
+    console.log(filteredOrders);
+
+    if (filteredOrders.length === 0) {
+      return sendResponse(res, 404, "Pizza name not found in orders", []);
+    }
+
+    return sendResponse(res, 200, "success", filteredOrders);
   } catch (error) {
     console.error("error ", error);
     return sendResponse(res, 500, "Internal Server Error", []);
