@@ -112,6 +112,41 @@ router.post("/login", async function (req, res, next) {
   }
 });
 
+/*add pizza menu*/
+router.post("/menu/", auth, async function (req, res, next) {
+  try {
+    const { menu, price, stoke } = req.body;
+
+    if (!(menu || price || stoke)) {
+      return sendResponse(res, 400, "Unsuccess, All input is require", []);
+    }
+
+    // Check if pizza menu exists
+    const existingMenu = await pizzaSchema.findOne({ menu });
+    if (existingMenu) {
+      return sendResponse(
+        res,
+        400,
+        "unsuccess, You already have this menu",
+        []
+      );
+    }
+
+    //save menu to Database
+    const addMenu = await pizzaSchema.create({
+      menu,
+      price,
+      stoke,
+    });
+    console.log(addMenu);
+
+    return sendResponse(res, 200, "success", addMenu);
+  } catch (error) {
+    console.error("error ", error);
+    return sendResponse(res, 500, "Internal Server Error", []);
+  }
+});
+
 /* PUT approve status */
 router.put("/approve/id/:id", auth, async function (req, res, next) {
   try {
@@ -124,13 +159,54 @@ router.put("/approve/id/:id", auth, async function (req, res, next) {
       return sendResponse(res, 400, "Unsuccess, User not found", []);
     }
     users.approve = approve;
-    console.log(users)
+    console.log(users);
     await users.save();
 
     // return sendResponse(res, 200, "Login success", users);
     return sendResponse(res, 200, "User has been Approved!", users);
   } catch (error) {
-    console.error('error ', error)
+    console.error("error ", error);
+    return sendResponse(res, 500, "Internal Server Error", []);
+  }
+});
+
+/* PUT pizza menu */
+router.put("/menu/id/:id", auth, async function (req, res, next) {
+  try {
+    const { id } = req.params;
+    const { menu, price, stoke } = req.body;
+
+    // Find and update the user's status
+    const pizzaMenu = await pizzaSchema.findById(id);
+    if (!pizzaMenu) {
+      return sendResponse(res, 400, "Unsuccess, this menu not found", []);
+    }
+    pizzaMenu.menu = menu;
+    pizzaMenu.price = price;
+    pizzaMenu.stoke = stoke;
+    await pizzaMenu.save();
+
+    return sendResponse(res, 200, "success", pizzaMenu);
+  } catch (error) {
+    console.error("error ", error);
+    return sendResponse(res, 500, "Internal Server Error", []);
+  }
+});
+
+/* delete pizza menu */
+router.delete("/menu/id/:id", async function (req, res, next) {
+  try {
+    let { id } = req.params;
+
+    // Find and delete pizza menu
+    const pizzaMenu = await pizzaSchema.findById(id);
+    if (!pizzaMenu) {
+      return sendResponse(res, 400, "Unsuccess, this menu not found", []);
+    }
+    let delMenu = await pizzaSchema.findByIdAndDelete(id, { id });
+    return sendResponse(res, 200, "success", delMenu);
+  } catch (error) {
+    console.error("error ", error);
     return sendResponse(res, 500, "Internal Server Error", []);
   }
 });
@@ -160,7 +236,7 @@ router.get("/menu/id/:id", auth, async function (req, res, next) {
 
     return sendResponse(res, 200, "success", menuPizzas);
   } catch (error) {
-    console.error('error ', error)
+    console.error("error ", error);
     return sendResponse(res, 500, "Internal Server Error", []);
   }
 });
@@ -173,7 +249,7 @@ router.get("/orders", auth, async function (req, res, next) {
 
     return sendResponse(res, 200, "success", orderPizzas);
   } catch (error) {
-    console.error('error ', error)
+    console.error("error ", error);
     return sendResponse(res, 500, "Internal Server Error", []);
   }
 });

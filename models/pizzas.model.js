@@ -5,7 +5,7 @@ const pizzaSchema = new Schema(
   {
     menu: { type: String, unique: true },
     price: { type: Number },
-    stock: { type: Number },
+    stoke: { type: Number },
   },
   {
     timestamps: true,
