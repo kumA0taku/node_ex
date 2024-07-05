@@ -1,6 +1,7 @@
 var express = require("express");
 var router = express.Router();
 var userSchema = require("../models/user.model");
+var adminSchema = require("../models/admin.model");
 var pizzaSchema = require("../models/pizzas.model");
 var ordersSchema = require("../models/orders.model");
 var bcrypt = require("bcrypt");
@@ -94,6 +95,54 @@ router.post("/login", async function (req, res, next) {
 
         // Send success response with user data
         return sendResponse(res, 200, "Login success", users);
+      } else {
+        // User not approved
+        return sendResponse(res, 401, "Not approve, User is not approved", []);
+      }
+    } else {
+      // Username not found or password mismatch
+      return sendResponse(
+        res,
+        400,
+        "Unsuccess, Invalid username or password",
+        []
+      );
+    }
+  } catch (error) {
+    return sendResponse(res, 500, "Internal Server Error", []);
+  }
+});
+
+/*admin login*/
+router.post("/admin_login", async function (req, res, next) {
+  try {
+    const { username, password } = req.body;
+
+    if (!(username && password)) {
+      return sendResponse(res, 400, "Unsuccess, All input is require", []);
+    }
+
+    // Find user by username
+    const admin = await adminSchema.findOne({ username });
+    console.log(admin)
+
+    // Check if user exists and password matches
+    if (admin && (await bcrypt.compare(password, admin.password))) {
+      if (admin.role == "admin") {
+        const token = jwt.sign(
+          {
+            user_id: admin._id,
+            username: admin.username,
+          },
+          process.env.TOKEN_KEY,
+          {
+            expiresIn: "2h",
+          }
+        );
+        admin.token = token;
+
+        // Send success response with user data
+        return sendResponse(res, 200, "Login success", admin);
       } else {
         // User not approved
         return sendResponse(res, 401, "Not approve, User is not approved", []);
